@@ -95,9 +95,9 @@
       text-align: left;
     }
     th {
-      background-color: #f2f4f7;
+      background-color: #0071ce;
       font-weight: 600;
-      color: #444;
+      color: white;
     }
     .add { color: green; }
     .remove { color: red; }
@@ -221,8 +221,10 @@
     <div id="spinner"></div>
   </div>
 
-<div class="form-container">
-  <h2>Access History Lookup</h2>
+  
+  <div class="form-container">
+    <img src="https://www.sailpoint.com/images/SailPoint-logo-cropped.svg" alt="SailPoint" class="logo h-[33px]" height="33" width="150" style="margin-bottom: 10px;">
+    <h2>Access History Lookup</h2>
   <label for="tenant">Tenant</label>
   <input type="text" id="tenant" readonly />
 
@@ -460,12 +462,17 @@
     function exportTable() {
       const table = document.getElementById("historyTable");
       if (!table) return;
+    
       let csv = [];
       for (let row of table.rows) {
-        const rowData = Array.from(row.cells).map(cell => `"${cell.innerText.replace(/"/g, '""')}"`).join(',');
+        const rowData = Array.from(row.cells)
+          .map(cell => `"${cell.innerText.replace(/"/g, '""')}"`)
+          .join(',');
         csv.push(rowData);
       }
-      const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    
+      const bom = "\uFEFF"; // UTF-8 BOM
+      const blob = new Blob([bom + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -475,6 +482,7 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
+
 
     function filterTable() {
       const input = document.getElementById("filterInput");
