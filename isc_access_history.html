@@ -213,7 +213,7 @@
   <label for="token">Session Token</label>
   <div class="token-input-group">
     <input type="text" id="token" placeholder="Ex: Bearer eyJ0eXAiOiJK..." />
-    <button onclick="document.getElementById('tokenModal').style.display='block'">Gerar Token</button>
+    <button onclick="document.getElementById('tokenModal').style.display='block'">Generate Token</button>
   </div>
 
   <label for="identityId">Identity ID</label>
@@ -247,7 +247,7 @@
 <div id="tokenModal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="document.getElementById('tokenModal').style.display='none'">&times;</span>
-    <h3>Gerar Bearer Token</h3>
+    <h3>Generate Bearer Token</h3>
     <label>Tenant</label>
     <input type="text" id="modalTenant" placeholder="ex: company-sb" />
     <label>Domain</label>
@@ -256,7 +256,7 @@
     <input type="text" id="modalClientId" />
     <label>Client Secret</label>
     <input type="password" id="modalClientSecret" />
-    <button onclick="generateToken()">Gerar Token</button>
+    <button onclick="generateToken()">Generate Token</button>
     <textarea id="modalTokenOutput" readonly></textarea>
   </div>
 </div>
