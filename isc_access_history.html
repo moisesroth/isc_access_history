@@ -44,6 +44,14 @@
     .token-input-group input {
       flex-grow: 1;
     }
+    .highlight-button {
+      animation: blink 0.5s ease-in-out 1;
+    }
+    @keyframes blink {
+      0% { background-color: #007bff; }
+      50% { background-color: #f0ad4e; }
+      100% { background-color: #007bff; }
+    }
     button {
       background-color: #007bff;
       color: white;
@@ -60,6 +68,13 @@
     }
     button:hover:not(:disabled) {
       background-color: #0056b3;
+    }
+    #generateTokenBtn:disabled {
+      background-color: #aaa;
+    }
+    #closeModalBtn.success {
+      background-color: #28a745;
+      color: white;
     }
     #results {
       margin-top: 40px;
@@ -121,6 +136,7 @@
       font-weight: bold;
       cursor: pointer;
     }
+  
 
     textarea {
       width: 100%;
@@ -195,6 +211,9 @@
     #filterInput {
       display: none;
     }
+    #closeModalBtn {
+      background-color: #6c757d;
+    }
 </style>
 </head>
 <body>
@@ -205,15 +224,15 @@
 <div class="form-container">
   <h2>Access History Lookup</h2>
   <label for="tenant">Tenant</label>
-  <input type="text" id="tenant" placeholder="Ex: company-sb" />
+  <input type="text" id="tenant" readonly />
 
   <label for="domain">Domain</label>
-  <input type="text" id="domain" placeholder="Ex: identitynow" />
+  <input type="text" id="domain" readonly />
 
   <label for="token">Session Token</label>
   <div class="token-input-group">
-    <input type="text" id="token" placeholder="Ex: Bearer eyJ0eXAiOiJK..." />
-    <button onclick="document.getElementById('tokenModal').style.display='block'">Generate Token</button>
+    <input type="text" id="token" readonly />
+    <button onclick="openTokenModal()">Generate Token</button>
   </div>
 
   <label for="identityId">Identity ID</label>
@@ -257,6 +276,7 @@
     <label>Client Secret</label>
     <input type="password" id="modalClientSecret" />
     <button onclick="generateToken()">Generate Token</button>
+    <button id="closeModalBtn" style="display: none;" onclick="document.getElementById('tokenModal').style.display='none'">Close</button>
     <textarea id="modalTokenOutput" readonly></textarea>
   </div>
 </div>
@@ -488,6 +508,7 @@
     formData.append("client_id", clientId);
     formData.append("client_secret", clientSecret);
 
+    
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -496,8 +517,11 @@
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         document.getElementById("modalTokenOutput").value = "Erro: " + JSON.stringify(data);
+        document.getElementById("closeModalBtn").style.display = "none";
+        document.querySelector('#tokenModal button[onclick="generateToken()"]').disabled = false;
         return;
       }
 
@@ -506,8 +530,13 @@
       document.getElementById("token").value = accessToken;
       document.getElementById("tenant").value = tenant;
       document.getElementById("domain").value = domain;
+      document.getElementById("closeModalBtn").style.display = "inline-block";
+      document.getElementById("closeModalBtn").classList.add("success");
+      document.querySelector('#tokenModal button[onclick="generateToken()"]').disabled = true;
     } catch (err) {
       document.getElementById("modalTokenOutput").value = "Erro: " + err;
+      document.getElementById("closeModalBtn").style.display = "none";
+      document.querySelector('#tokenModal button[onclick="generateToken()"]').disabled = false;
     }
   }
 
@@ -519,7 +548,24 @@
       }
     }
 
-    
+    const tokenFieldIds = ['tenant', 'domain', 'token'];
+    tokenFieldIds.forEach(id => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const field = document.getElementById(id);
+        field.addEventListener('click', () => {
+          const btn = document.querySelector('.token-input-group button');
+          btn.classList.remove('highlight-button');
+          void btn.offsetWidth; // reflow
+          btn.classList.add('highlight-button');
+        });
+      });
+    });
+
+    function openTokenModal() {
+      document.getElementById('tokenModal').style.display = 'block';
+      document.getElementById("closeModalBtn").style.display = "none";
+      document.querySelector('#tokenModal button[onclick="generateToken()"]')?.removeAttribute("disabled");
+    }
 </script>
 </body>
-</html>
+</html> 
