@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Access History</title>
+<style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #e9eff5, #f8f9fa);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .form-container {
+      background: #ffffff;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      width: 100%;
+    }
+    .form-container h2 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    input[type="text"], input[type="password"], select {
+      width: -webkit-fill-available;
+      padding: 12px 14px;
+      margin-top: 8px;
+      margin-bottom: 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    .token-input-group {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      white-space: nowrap;
+    }
+    .token-input-group input {
+      flex-grow: 1;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 12px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    button:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+    button:hover:not(:disabled) {
+      background-color: #0056b3;
+    }
+    #results {
+      margin-top: 40px;
+      width: 100%;
+      max-width: 1000px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    th, td {
+      padding: 14px;
+      border-bottom: 1px solid #e6e6e6;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f4f7;
+      font-weight: 600;
+      color: #444;
+    }
+    .add { color: green; }
+    .remove { color: red; }
+    .old-value { color: #85c6ff; }
+    .new-value { color: #0033a1; }
+    .nowrap { white-space: nowrap; }
+
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    textarea {
+      width: 100%;
+      height: 80px;
+      margin-top: 10px;
+      font-family: monospace;
+      resize: none;
+    }
+
+    .label-new {
+      background-color: #28a745;
+      color: white;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 12px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .label-removed {
+      background-color: #dc3545;
+      color: white;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 12px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .label-important {
+      /* background-color: #0056ba; */
+      background-color: #d926b1;
+      color: white;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 12px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    td:nth-child(6) { /* Event column */
+      color: grey;
+    }
+    #timezoneSelector {
+      width: 100%;
+      margin-bottom: 16px;
+    }
+    #loadingOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.3);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #spinner {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #007bff;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #filterInput {
+      display: none;
+    }
+</style>
+</head>
+<body>
+  <div id="loadingOverlay">
+    <div id="spinner"></div>
+  </div>
+
+<div class="form-container">
+  <h2>Access History Lookup</h2>
+  <label for="tenant">Tenant</label>
+  <input type="text" id="tenant" placeholder="Ex: company-sb" />
+
+  <label for="domain">Domain</label>
+  <input type="text" id="domain" placeholder="Ex: identitynow" />
+
+  <label for="token">Session Token</label>
+  <div class="token-input-group">
+    <input type="text" id="token" placeholder="Ex: Bearer eyJ0eXAiOiJK..." />
+    <button onclick="document.getElementById('tokenModal').style.display='block'">Gerar Token</button>
+  </div>
+
+  <label for="identityId">Identity ID</label>
+  <input type="text" id="identityId" placeholder="Ex: 0004bff114b04be694702416a87c6ac4" />
+
+  <label for="timezoneSelector">Timezone</label>
+  <select id="timezoneSelector">
+    <option value="original">Original log time (raw)</option>
+    <option value="local">Use browser local time</option>
+    <option value="UTC">UTC (±00:00)</option>
+    <option value="America/Sao_Paulo">America/Sao_Paulo (UTC-03:00)</option>
+    <option value="America/New_York">America/New_York (UTC-05:00)</option>
+    <option value="Europe/London">Europe/London (UTC+00:00)</option>
+    <option value="Asia/Tokyo">Asia/Tokyo (UTC+09:00)</option>
+  </select>
+
+  <button onclick="fetchEvents(0)">Search History</button>
+    <button id="filterButton" onclick="toggleFilter()" style="margin-left: 10px; background-color: #6c757d; display: none;">Filter</button>
+    <button id="exportBtn" onclick="exportTable()" style="margin-left: auto; background-color: #28a745; display: none; float: right;">Export CSV</button>
+  </div>
+
+  <div style="margin: 20px 0; max-width: 1000px; width: 100%;">
+    <input type="text" id="filterInput" onkeyup="filterTable()" placeholder="Type to filter...">
+</div>
+
+  <div id="results"></div>
+  <button id="loadMoreBtn" style="display: none; margin-top: 20px;" onclick="loadMore()">Load more</button>
+
+
+<!-- MODAL -->
+<div id="tokenModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="document.getElementById('tokenModal').style.display='none'">&times;</span>
+    <h3>Gerar Bearer Token</h3>
+    <label>Tenant</label>
+    <input type="text" id="modalTenant" placeholder="ex: company-sb" />
+    <label>Domain</label>
+    <input type="text" id="modalDomain" value="identitynow" />
+    <label>Client ID</label>
+    <input type="text" id="modalClientId" />
+    <label>Client Secret</label>
+    <input type="password" id="modalClientSecret" />
+    <button onclick="generateToken()">Gerar Token</button>
+    <textarea id="modalTokenOutput" readonly></textarea>
+  </div>
+</div>
+
+<script>
+    let offset = 0;
+    let currentId = "";
+    let currentToken = "";
+    const limit = 50;
+    let filterEnabled = false;
+
+    function toggleFilter() {
+      const input = document.getElementById("filterInput");
+      input.value = "";
+      filterTable();
+      filterEnabled = !filterEnabled;
+      input.style.display = filterEnabled ? "block" : "none";
+    }
+
+    function showLoading() {
+      document.getElementById("loadingOverlay").style.display = "flex";
+    }
+
+    function hideLoading() {
+      document.getElementById("loadingOverlay").style.display = "none";
+    }
+
+    async function fetchEvents(ofs) {
+      currentId = document.getElementById("identityId").value.trim();
+      currentToken = document.getElementById("token").value.trim();
+      currentTenant = document.getElementById("tenant").value.trim();
+      currentDomain = document.getElementById("domain").value.trim();
+      if (!currentId || !currentToken) return alert("Please provide Identity ID and Token");
+
+      showLoading();
+      const url = `https://${currentTenant}.api.${currentDomain}.com/beta/historical-identities/${currentId}/events?count=true&limit=${limit}&offset=${ofs}`;
+
+      try {
+        const res = await fetch(url, {
+          headers: { "Authorization": currentToken }
+        });
+
+        if (!res.ok) {
+          alert("Failed to fetch events. Check the token or ID.");
+          hideLoading();
+          return;
+        }
+
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          if (ofs === 0) offset = 0;
+          renderResults(data);
+          offset += data.length;
+          document.getElementById("loadMoreBtn").style.display = "block";
+          document.getElementById("exportBtn").style.display = "inline-block";
+          document.getElementById("filterButton").style.display = "inline-block";
+        } else {
+          if (ofs === 0) document.getElementById("results").innerHTML = "<p>No events found.</p>";
+          document.getElementById("loadMoreBtn").style.display = "none";
+        }
+      } catch (error) {
+        alert("Error fetching data: " + error);
+      } finally {
+        hideLoading();
+      }
+    }
+
+    function formatDateTime(isoString) {
+      const tz = document.getElementById("timezoneSelector").value;
+      if (tz === "original") {
+        const d = new Date(isoString);
+        const date = d.toISOString().slice(0, 10).split("-").reverse().join("/");
+        const time = d.toISOString().slice(11, 19);
+        return { date, time };
+      }
+      let d;
+      if (tz === "local") {
+        d = new Date(isoString);
+      } else {
+        d = new Date(new Date(isoString).toLocaleString("en-US", { timeZone: tz }));
+      }
+      const date = d.toLocaleDateString("pt-BR");
+      const time = d.toLocaleTimeString("pt-BR", { hour12: false });
+      return { date, time };
+    }
+
+    function capitalize(word) {
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    }
+
+    function renderResults(events) {
+      const container = document.getElementById("results");
+      if (offset === 0) {
+        container.innerHTML = `
+          <table id="historyTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Source</th>
+                <th>Attribute</th>
+                <th>Change</th>
+                <th>Event</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        `;
+      }
+      const tbody = document.getElementById("resultsBody");
+      events.forEach(e => {
+        const { date, time } = formatDateTime(e.dateTime);
+        const eventType = e.eventType;
+
+        if (eventType === "AttributesChanged" && Array.isArray(e.attributeChanges)) {
+          e.attributeChanges.forEach(attr => {
+        const isImportantAttr = attr.name === "cloudLifecycleState";
+        const badge = isImportantAttr ? '<span class="label-important">important</span>' : "";
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${date}</td>
+          <td>${time}</td>
+          <td class="nowrap">Identity</td>
+          <td>${attr.name}${badge}</td>
+          <td><span class="old-value">${attr.previousValue}</span> → <span class="new-value">${attr.newValue}</span></td>
+          <td>${eventType}</td>
+        `;
+        tbody.appendChild(row);
+          });
+        } else if (eventType === "AccessItemRemoved" || eventType === "AccessItemAssociated") {
+          const item = e.accessItem?.displayName || "-";
+          const type = capitalize(e.accessItem?.type || e.accessItemType || "-");
+          const isRole = type.toLowerCase() === "role";
+          const source = isRole ? "Identity" : (e.accessItem?.sourceName || "-");
+          const cssClass = eventType === "AccessItemRemoved" ? "remove" : "add";
+          const isAccountNew = eventType === "AccessItemAssociated" && type.toLowerCase() === "account";
+          const isAccountRemoved = eventType === "AccessItemRemoved" && type.toLowerCase() === "account";
+          const badge = isAccountNew ? '<span class="label-new">new</span>' : isAccountRemoved ? '<span class="label-removed">removed</span>' : "";
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${date}</td>
+            <td>${time}</td>
+            <td class="nowrap">${source}</td>
+            <td>${type}${badge}</td>
+            <td class="${cssClass}">${item}</td>
+            <td>${eventType}</td>
+          `;
+          tbody.appendChild(row);
+        } else if (eventType === "AccountStatusChanged" && e.statusChange) {
+          const account = e.account;
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${date}</td>
+            <td>${time}</td>
+            <td class="nowrap">${account?.sourceName || "-"}</td>
+            <td>Account</td>
+            <td><span class="old-value">${e.statusChange.previousStatus}</span> → <span class="new-value">${e.statusChange.newStatus}</span></td>
+            <td>${eventType}</td>
+          `;
+          tbody.appendChild(row);
+        } else {
+          const item = e.accessItem?.displayName || "-";
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${date}</td>
+            <td>${time}</td>
+            <td class="nowrap">-</td>
+            <td>-</td>
+            <td>${item}</td>
+            <td>${eventType}</td>
+          `;
+          tbody.appendChild(row);
+        }
+      });
+    }
+
+    function loadMore() {
+      fetchEvents(offset);
+    }
+
+    function exportTable() {
+      const table = document.getElementById("historyTable");
+      if (!table) return;
+      let csv = [];
+      for (let row of table.rows) {
+        const rowData = Array.from(row.cells).map(cell => `"${cell.innerText.replace(/"/g, '""')}"`).join(',');
+        csv.push(rowData);
+      }
+      const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'access_history.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function filterTable() {
+      const input = document.getElementById("filterInput");
+      const filter = input.value.toLowerCase();
+      const table = document.getElementById("historyTable");
+      if (!table || !filterEnabled) return;
+      const tr = table.getElementsByTagName("tr");
+      for (let i = 1; i < tr.length; i++) {
+        const row = tr[i];
+        const cells = row.getElementsByTagName("td");
+        let show = false;
+        for (let j = 0; j < cells.length; j++) {
+          if (cells[j].innerText.toLowerCase().includes(filter)) {
+            show = true;
+            break;
+          }
+        }
+        row.style.display = show ? "" : "none";
+      }
+    }
+
+  async function generateToken() {
+    const tenant = document.getElementById("modalTenant").value.trim();
+    const domain = document.getElementById("modalDomain").value.trim();
+    const clientId = document.getElementById("modalClientId").value.trim();
+    const clientSecret = document.getElementById("modalClientSecret").value.trim();
+
+    const url = `https://${tenant}.api.${domain}.com/oauth/token`;
+    const formData = new URLSearchParams();
+    formData.append("grant_type", "client_credentials");
+    formData.append("client_id", clientId);
+    formData.append("client_secret", clientSecret);
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString()
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        document.getElementById("modalTokenOutput").value = "Erro: " + JSON.stringify(data);
+        return;
+      }
+
+      const accessToken = "Bearer " + data.access_token;
+      document.getElementById("modalTokenOutput").value = accessToken;
+      document.getElementById("token").value = accessToken;
+      document.getElementById("tenant").value = tenant;
+      document.getElementById("domain").value = domain;
+    } catch (err) {
+      document.getElementById("modalTokenOutput").value = "Erro: " + err;
+    }
+  }
+
+    // Fecha o modal se o usuário clicar fora do conteúdo
+    window.onclick = function(event) {
+      const modal = document.getElementById('tokenModal');
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    }
+
+    
+</script>
+</body>
+</html>
