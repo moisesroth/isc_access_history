@@ -44,6 +44,13 @@
     .token-input-group input {
       flex-grow: 1;
     }
+    .tenant-domain-group {
+      display: flex;
+      gap: 10px;
+    }
+    .tenant-domain-group div {
+      flex: 1;
+    }
     .highlight-button {
       animation: blink 0.5s ease-in-out 1;
     }
@@ -177,7 +184,7 @@
       margin-left: 6px;
       vertical-align: middle;
     }
-    td:nth-child(6) { /* Event column */
+    td:nth-child(6) {
       color: grey;
     }
     #timezoneSelector {
@@ -225,11 +232,17 @@
   <div class="form-container">
     <img src="https://www.sailpoint.com/images/SailPoint-logo-cropped.svg" alt="SailPoint" class="logo h-[33px]" height="33" width="150" style="margin-bottom: 10px;">
     <h2>Access History Lookup</h2>
-  <label for="tenant">Tenant</label>
-  <input type="text" id="tenant" readonly />
 
-  <label for="domain">Domain</label>
-  <input type="text" id="domain" readonly />
+    <div class="tenant-domain-group">
+      <div>
+        <label for="tenant">Tenant</label>
+        <input type="text" id="tenant" readonly />
+      </div>
+      <div>
+        <label for="domain">Domain</label>
+        <input type="text" id="domain" readonly />
+      </div>
+    </div>
 
   <label for="token">Session Token</label>
   <div class="token-input-group">
@@ -238,7 +251,7 @@
   </div>
 
   <label for="identityId">Identity ID</label>
-  <input type="text" id="identityId" placeholder="Ex: 0004bff114b04be694702416a87c6ac4" />
+  <input type="text" id="identityId" placeholder="Ex: 0004bff114b04be694702416a87c6ac4" onkeypress="if(event.key === 'Enter') fetchEvents(0)"/>
 
   <label for="timezoneSelector">Timezone</label>
   <select id="timezoneSelector">
